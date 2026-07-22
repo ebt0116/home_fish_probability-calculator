@@ -1382,8 +1382,8 @@
             let offsetPercent = 0; 
 
             const currentId = parseInt(document.getElementById('fishId').value) || 1;
-            const relicMultiplier = (currentId === 118) ? 0.2 : 1.0;
-            const blessingMultiplier = (currentId === 118) ? 0.2 : 1.0;
+            const relicMultiplier = (currentId === 118) ? 1.0 : 1.0;
+            const blessingMultiplier = (currentId === 118) ? 1.0 : 1.0;
 
             // 聖物（頁籤二）狀態加減修正
             if (selectedTab2Val === '四葉草' || selectedTab2Val === '幸運草') {
@@ -1408,6 +1408,7 @@
                 else if (rarIdx === 2) offsetPercent += 1.44;
                 else if (rarIdx === 1) offsetPercent += 0.12;
                 else if (rarIdx === 0) offsetPercent += 0.04;
+                offsetPercent += celestialOffset * relicMultiplier;
             }
 
             // 海洋的祝福（拉桿二）加減修正
@@ -1773,16 +1774,16 @@
                         let shinyMultiplier = 0.01;
                         
                         const relicMultiplier = (currentId === 118) ? 0.2 : 1.0;
-                        const blessingMultiplier = (currentId === 118) ? 0.2 : 1.0;
+                        const blessingMultiplier = (selectedTab2Val !== '閃耀') ? 1.0 :(currentId === 118) ? 0.2 :(currentId === 320) ? 0.15 : 0.3;
 
                         if (selectedTab2Val === '閃耀') {
                             shinyMultiplier += 0.07;
                         } else if (selectedTab2Val === '四葉草' || selectedTab2Val === '幸運草') {
-                            shinyMultiplier += 0.02 * relicMultiplier;
+                            shinyMultiplier += 0.02;
                         } else if (selectedTab2Val === '天界') {
-                            shinyMultiplier += 0.05 * relicMultiplier;
+                            shinyMultiplier += 0.05;
                         } else if (selectedTab2Val === '徽章') {
-                            shinyMultiplier += 0.002;
+                            shinyMultiplier += 0.01;
                         }
                         
                         // 根據海洋的祝福（拉桿二）額外加成色違乘數
