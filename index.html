@@ -1761,6 +1761,25 @@
         #bingo-edit > .bingo-edit-icon { transform:translateY(-4%); }
         #page-search :is(#search-clear,#search-submit,#search-new-page) > .ui-action-icon { color:#fff; }
         :is(#bingo-back,#details-return) > .ui-action-icon { transform:translateY(-5%); }
+        /* Give both edit rows the full cell width and half its available height. */
+        #bingo-grid .bingo-edit-cell {
+            display:grid;grid-template-columns:minmax(0,1fr);
+            grid-template-rows:minmax(0,1fr) minmax(0,1fr);
+            padding:5%;gap:6%;align-items:stretch;justify-content:stretch;
+        }
+        #bingo-grid .bingo-edit-cell label {
+            width:100%;height:100%;min-height:0;box-sizing:border-box;
+            font-size:29cqw;line-height:1;gap:4cqw;
+        }
+        #bingo-grid .bingo-edit-cell .bingo-number-field { gap:3cqw; }
+        #bingo-grid .bingo-edit-cell input[type="text"] {
+            height:100%;width:0;min-height:0;padding:0;box-sizing:border-box;
+            font-size:30cqw;line-height:1;touch-action:manipulation;
+        }
+        #bingo-grid .bingo-edit-cell .bingo-free-field { cursor:pointer;touch-action:manipulation; }
+        #bingo-grid .bingo-edit-cell input[type="checkbox"] {
+            width:37cqw;height:37cqw;max-height:100%;margin:0;cursor:pointer;
+        }
     </style>
 </head>
 <body class="bg-[#111111] text-slate-100 min-h-screen flex items-stretch" style="padding: calc(var(--g) * 2);">
@@ -3417,7 +3436,7 @@
                         number.addEventListener('input',()=>{number.value=number.value.replace(/\D/g,'');drafts[index].id=number.value;number.removeAttribute('aria-invalid');});
                         number.addEventListener('blur',()=>{number.value=(number.value||'0').padStart(3,'0');drafts[index].id=number.value;});
                         const numberField=document.createElement('label');numberField.className='bingo-number-field';numberField.append(document.createTextNode('#'),number);
-                        const label=document.createElement('label');const free=document.createElement('input');free.type='checkbox';free.checked=drafts[index].free;free.setAttribute('aria-label',`第 ${index+1} 格 Free`);label.append(free,document.createTextNode('Free'));
+                        const label=document.createElement('label');label.className='bingo-free-field';const free=document.createElement('input');free.type='checkbox';free.checked=drafts[index].free;free.setAttribute('aria-label',`第 ${index+1} 格 Free`);label.append(free,document.createTextNode('Free'));
                         free.addEventListener('change',()=>{drafts[index].free=free.checked;number.disabled=free.checked;number.removeAttribute('aria-invalid');});
                         cell.append(numberField,label);grid.append(cell);return;
                     }
