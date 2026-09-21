@@ -4438,7 +4438,8 @@ self.onmessage = ({data}) => {
        if(all.length<20||all.length<t.all.length*.4)continue;
        if(t.key==='free'&&(all.filter(s=>s[2]>220).length<6||all.filter(s=>s[2]<90).length<6))continue;
        const partial={all,samples:all};
-       for(const ds of [-1,0,1])for(const dy of [-2,0,2])for(const dx of [-2,0,2]){
+       // FREE lettering can shift within the tile; retain the strict error threshold.
+       for(const ds of [-4,-2,0,2,4])for(const dy of [-6,-4,-2,0,2,4,6])for(const dx of [-6,-4,-2,0,2,4,6]){
          const e=error(partial,x+dx,y+dy,size+ds,true);
          if(e<best.e)best={key:t.key,e};
        }
