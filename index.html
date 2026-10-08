@@ -4044,7 +4044,14 @@
                 let heartBox=heart?.getBoundingClientRect();
                 if(isIcons&&!selected)heartBox={left:box.right-box.width*.32,top:box.top-box.width*.08,width:box.width*.4,height:box.width*.4};
                 const style=getComputedStyle(panel);
-                return {box,image:image?.getBoundingClientRect(),meme:meme?.getBoundingClientRect(),heart:heartBox,
+                // Measure the gem before its spinning transform: a rotated bounding
+                // rectangle changes with the angle and cannot represent its layout size.
+                const gem=image&&panel.classList.contains('diamond-reward');
+                const imageStyle=gem?getComputedStyle(image):null;
+                const imageBox=gem?{left:box.left+panel.clientLeft+image.offsetLeft,
+                    top:box.top+panel.clientTop+image.offsetTop,
+                    width:parseFloat(imageStyle.width),height:parseFloat(imageStyle.height)}:image?.getBoundingClientRect();
+                return {box,image:imageBox,meme:meme?.getBoundingClientRect(),heart:heartBox,
                     heartOpacity:favorite?(isIcons?(selected?1:0):(selected?1:.28)):0,selected,
                     radius:style.borderRadius,background:style.backgroundColor};
             }
@@ -4153,7 +4160,19 @@
                     group.dataset.fishId=item.querySelector('.fish-result').dataset.fishId;
                     const panel=document.createElement('div');panel.className='search-morph-panel';
                     panel.style.cssText=`position:absolute;left:0;top:0;box-sizing:border-box;border-radius:${old.radius};background:${next.background};`;
-                    const image=part(item.querySelector('.fish-result-image'));
+                    const imageSource=item.querySelector('.fish-result-image');
+                    const image=part(imageSource);
+                    if(imageSource?.closest('.diamond-reward')){
+                        // Keep spin separate from the eased layout dimensions, and
+                        // share the live rotation phase for a seamless handoff.
+                        image.style.transformOrigin='47.583% 50.869%';
+                        const spin=imageSource.getAnimations().find(animation=>animation.animationName==='diamond-reward-spin');
+                        const copySpin=image.animate([
+                            {transform:'translate(2.417%,-0.869%) scale(.5) rotate(0deg)'},
+                            {transform:'translate(2.417%,-0.869%) scale(.5) rotate(360deg)'}
+                        ],{duration:2000,iterations:Infinity,easing:'linear'});
+                        if(spin)copySpin.currentTime=spin.currentTime;
+                    }
                     const memeSource=item.querySelector('.diamond-reward-meme');
                     const meme=memeSource?part(memeSource):null;
                     const heart=part(item.querySelector('.fish-favorite img'),old.selected?'none':'grayscale(1)');
