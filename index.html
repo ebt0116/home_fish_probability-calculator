@@ -1090,6 +1090,10 @@
             from { transform:translateY(100%); opacity:0; }
             to { transform:translateY(0); opacity:1; }
         }
+        @keyframes search-rarity-reveal {
+            from { opacity:0; transform:translateY(100%); }
+            to { opacity:1; transform:translateY(0); }
+        }
 
         #bingo-fish-info { display:flex; gap:var(--g); align-items:center; flex-wrap:wrap; }
         #bingo-fish-info:empty { display:none; }
@@ -4190,6 +4194,27 @@
             const before=layout(first),after=layout(last),tracks=[];
             const lightMotion=matchMedia('(pointer:coarse)').matches;
             const fragment=document.createDocumentFragment();
+            const svgNS='http://www.w3.org/2000/svg';
+            let blurSvg=null,blurDefs=null;
+            if(!lightMotion){
+                blurSvg=document.createElementNS(svgNS,'svg');
+                blurSvg.setAttribute('aria-hidden','true');
+                blurSvg.style.cssText='position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;';
+                blurDefs=document.createElementNS(svgNS,'defs');blurSvg.append(blurDefs);
+            }
+            function createMotionBlur(){
+                if(!blurDefs)return null;
+                const filter=document.createElementNS(svgNS,'filter');
+                const id='smb-'+(++motionFilterSequence);
+                filter.id=id;
+                filter.setAttribute('x','-50%');filter.setAttribute('y','-50%');
+                filter.setAttribute('width','200%');filter.setAttribute('height','200%');
+                filter.setAttribute('color-interpolation-filters','sRGB');
+                const b=document.createElementNS(svgNS,'feGaussianBlur');
+                b.setAttribute('stdDeviation','0 0');
+                filter.append(b);blurDefs.append(filter);
+                return{id,blur:b};
+            }
             function part(source,filter='none'){
                     if(!source)return document.createElement('span');
                     const node=document.createElement('img');node.src=source.currentSrc||source.src;
@@ -4223,7 +4248,7 @@
                     const memeSource=item.querySelector('.diamond-reward-meme');
                     const meme=memeSource?part(memeSource):null;
                     const heart=part(item.querySelector('.fish-favorite img'),old.selected?'none':'grayscale(1)');
-                    if(meme){group.style.overflow='hidden';group.style.borderRadius=old.radius;}
+                    group.style.overflow='hidden';group.style.borderRadius=old.radius;
                     group.append(panel,image,...(meme?[meme]:[]),heart);
                     glyphs.forEach(glyph=>{
                         const slot=document.createElement('span');
@@ -4236,15 +4261,17 @@
                             node=document.createElement('span');node.textContent=glyph.char;
                             node.style.cssText=`position:absolute;left:0;top:0;font:${glyph.font};color:${glyph.color};line-height:${glyph.height}px;white-space:pre;`;
                         }
-                        node.style.animation=`${icons?'search-letter-roll-out':'search-letter-roll-in'} 160ms cubic-bezier(.22,1,.36,1) ${(icons?0:55)+glyph.delay}ms both`;
+                        node.style.animation=`${icons?'search-letter-roll-out':'search-letter-roll-in'} 160ms cubic-bezier(.22,1,.36,1) ${glyph.isImage?0:(icons?0:55)+glyph.delay}ms both`;
                         slot.append(node);group.append(slot);
                     });
                     fragment.append(group);
                     copies.push({group,panel,image,meme,heart});
                 }
-                tracks.push({index,old,next,copies,glyphs,lastTravel:null});
+                const mb=createMotionBlur();
+                tracks.push({index,old,next,copies,glyphs,lastTravel:null,blur:mb?.blur||null,blurId:mb?.id||null,blurActive:false,lastX:null,lastY:null});
             }
             overlay.append(fragment);
+            if(blurSvg)document.body.append(blurSvg);
             const previousVisibility=list.style.visibility,wasInert=list.inert;
             list.style.visibility='hidden';list.inert=true;viewButton.disabled=true;
             let finished=false,timer=0,frame=0;
@@ -4258,6 +4285,7 @@
                 // Swap in one paint: overlapping translucent hearts brighten for one
                 // frame, while restoring opacity with a transition makes them blink.
                 overlay.remove();
+                if(blurSvg)blurSvg.remove();
                 void list.offsetWidth;
                 requestAnimationFrame(()=>requestAnimationFrame(()=>{delete page.dataset.searchHandoff;}));
                 stopSearchViewMotion=()=>{};
@@ -4289,13 +4317,27 @@
                     const to=(next.box.left-after.left)/after.span+newRow-oldRow;
                     const travel=lerp(from,to,p),wrap=Math.floor(travel+1e-9);
                     const x=(travel-wrap)*span,row=oldRow+wrap;
-                    const speed=track.lastTravel===null?0:Math.abs((travel-track.lastTravel)*span)/Math.max(1,delta);
                     track.lastTravel=travel;
-                    const raw=speed*.65;const stretch=p===0||p===1||lightMotion||raw<1.2?1:1+Math.min(.12,(raw-1.2)*.018);
                     const width=lerp(old.box.width,next.box.width,p),height=lerp(old.box.height,next.box.height,p);
+                    const pixelX=left+x,pixelY=top+row*pitch;
+                    if(track.blur){
+                        if(track.lastX!==null&&p>0&&p<1){
+                            const dx=Math.abs(pixelX-track.lastX);
+                            const bx=Math.min(3.5,dx*.15);
+                            if(bx<.3){
+                                if(track.blurActive){for(const copy of copies)copy.group.style.filter='none';track.blurActive=false;}
+                            }else{
+                                if(!track.blurActive){for(const copy of copies)copy.group.style.filter=`url("#${track.blurId}")`;track.blurActive=true;}
+                                track.blur.setAttribute('stdDeviation',`${bx} 0`);
+                            }
+                        }else if(track.blurActive){
+                            for(const copy of copies)copy.group.style.filter='none';track.blurActive=false;
+                        }
+                        track.lastX=pixelX;track.lastY=pixelY;
+                    }
                     for(let c=0;c<copies.length;c++){
                         const {group,panel,image,meme,heart}=copies[c];
-                        group.style.transform=stretch===1?`translate(${left+x-c*span}px,${top+(row+c)*pitch}px)`:`translate(${left+x-c*span}px,${top+(row+c)*pitch}px) scaleX(${stretch})`;
+                        group.style.transform=`translate(${left+x-c*span}px,${top+(row+c)*pitch}px)`;
                         group.style.width=`${width}px`;group.style.height=`${height}px`;
                         panel.style.width=`${width}px`;panel.style.height=`${height}px`;
                         for(const [node,key] of [[image,'image'],[meme,'meme'],[heart,'heart']]){
