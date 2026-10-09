@@ -983,7 +983,7 @@
         .bingo-cell { position:relative; aspect-ratio:1; min-width:0; display:grid; place-items:center; overflow:visible; background:#333; border:2px solid transparent; border-radius:8px; padding:12%; }
         .bingo-cell img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
         .bingo-cell .bingo-bait-clip { position:absolute; inset:-2px; z-index:0; overflow:hidden; border-radius:inherit; pointer-events:none; }
-        .bingo-cell img.bingo-bait-background { position:absolute; inset:0; width:100%; max-width:none; height:100%; object-fit:fill; clip-path:inset(0 0 68.75% 68.75%); pointer-events:none; }
+        .bingo-cell img.bingo-bait-background { position:absolute; inset:auto 0 0 auto; width:75%; max-width:none; height:75%; object-fit:fill; clip-path:inset(0 0 68.75% 68.75%); transform:rotate(90deg); transform-origin:center; pointer-events:none; }
         .bingo-cell img.bingo-fish-icon { position:relative; z-index:2; }
         #page-bingo[data-editing="true"] .bingo-cell { cursor:pointer; border-color:#657782; }
         .bingo-cell[aria-pressed="true"]::after { content:""; position:absolute; inset:-2px; z-index:1; box-sizing:border-box; border:2px solid #8dd9e8; border-radius:inherit; pointer-events:none; }
@@ -1098,6 +1098,18 @@
         #bingo-fish-info label { display:flex; align-items:center; white-space:nowrap; }
         #bingo-fish-info input,.bingo-edit-cell input[type="checkbox"] { appearance:auto; accent-color:#77cccc; width:calc(var(--g)*1.25); height:calc(var(--g)*1.25); }
         .bingo-cell[data-lit="true"] { background:#527c7e; }
+        .bingo-cell[data-connected="true"] { background:#527c7e; border-color:#ffe48a; box-shadow:inset 0 0 0 max(0px,calc(var(--g)*.5 - 2px)) #ffe48a; }
+        .bingo-cell[data-connected="true"][aria-pressed="true"]::after { border-color:#ffb800; border-width:calc(var(--g)*.25); }
+        @keyframes bingo-hardest-pulse {
+            0%,100% { opacity:.08; }
+            50% { opacity:1; }
+        }
+        #bingo-grid { isolation:isolate; }
+        .bingo-cell[data-hardest="true"]::before {
+            content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
+            box-shadow:0 0 12px 5px rgba(255,45,45,.9);
+            animation:bingo-hardest-pulse 3s ease-in-out infinite;
+        }
         #bingo-grid .bingo-edit-cell { display:flex; flex-direction:column; justify-content:center; gap:calc(var(--g)*.4); padding:calc(var(--g)*.3); }
         .bingo-edit-cell input[type="text"] { width:100%; min-width:0; text-align:center; background:#181818; border:1px solid #888; border-radius:4px; font-size:calc(var(--g)*1.3); color:white; }
         .bingo-edit-cell input[type="text"]:disabled { background:#555; color:#888; border-color:#555; }
@@ -1288,6 +1300,7 @@
         #bingo-fish-info .bingo-light-button { flex:0 0 calc(var(--g)*4); width:calc(var(--g)*4); height:calc(var(--g)*4); padding:calc(var(--g)*.3); border:0; border-radius:calc(var(--g)*.65); background:#333; }
         #bingo-fish-info .bingo-light-button img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; filter:grayscale(1); }
         #bingo-fish-info .bingo-light-button[aria-pressed="true"] { background:#527c7e; }
+        #bingo-fish-info .bingo-light-button[data-connected="true"] { background:#527c7e; box-shadow:inset 0 0 0 calc(var(--g)*.5) #ffe48a; }
         #bingo-fish-info .bingo-light-button[aria-pressed="true"] img { filter:none; }
         #page-bingo #bingo-options-slot #options-panel > .slider-options::after { display:none; }
         #page-bingo #bingo-options-slot #options-panel > .slider-options { padding-bottom:0; }
@@ -1819,7 +1832,7 @@
         @media (min-aspect-ratio:3/2) {
             #bingo-fish-info .bingo-rarity-count > .bingo-line-unit { font-size:13.2cqh; }
         }
-        #bingo-fish-info .bingo-line-count { color:#88dddd; }
+        #bingo-fish-info .bingo-line-count { color:#ffe48a; }
         #bingo-fish-info .bingo-rarity-count > .bingo-line-unit { transform:translateY(-.15em); }
         :is(.header-action,.bingo-toolbar > button) > .ui-action-icon {
             width:55%;height:55%;flex:none;pointer-events:none;
@@ -2936,11 +2949,11 @@
         }
 
         // 計算各稀有度經過拉桿或狀態修正後的最終投放機率
-        function getAdjustedRarityProbability(rarIdx) {
+        function getAdjustedRarityProbability(rarIdx, bait=selectedTab1Val, relic=selectedTab2Val, blessing=parseFloat(document.getElementById('slider5').value)||0) {
             // 1. 如果魚餌（頁籤 1）鎖死稀有度 (不等於 4 '無')
-            if (selectedTab1Val !== 4) {
+            if (bait !== 4) {
                 // 少見 (頁籤一索引 3)
-                if (selectedTab1Val === 3) {
+                if (bait === 3) {
                     if (rarIdx === 4) return 0.0;
                     if (rarIdx === 3) return 0.92;
                     if (rarIdx === 2) return 0.072;
@@ -2948,7 +2961,7 @@
                     if (rarIdx === 0) return 0.001;
                 }
                 // 稀有 (頁籤一索引 2)
-                if (selectedTab1Val === 2) {
+                if (bait === 2) {
                     if (rarIdx === 4) return 0.0;
                     if (rarIdx === 3) return 0.0;
                     if (rarIdx === 2) return 0.962;
@@ -2956,7 +2969,7 @@
                     if (rarIdx === 0) return 0.004;
                 }
                 // 超稀有 (頁籤一索引 1)
-                if (selectedTab1Val === 1) {
+                if (bait === 1) {
                     if (rarIdx === 4) return 0.0;
                     if (rarIdx === 3) return 0.0;
                     if (rarIdx === 2) return 0.0;
@@ -2964,7 +2977,7 @@
                     if (rarIdx === 0) return 0.03;
                 }
                 // 史詩 (頁籤一索引 0)
-                if (selectedTab1Val === 0) {
+                if (bait === 0) {
                     if (rarIdx === 4) return 0.0;
                     if (rarIdx === 3) return 0.0;
                     if (rarIdx === 2) return 0.0;
@@ -2982,7 +2995,7 @@
             const blessingMultiplier = (currentId === 118) ? 1.0 : 1.0;
 
             // 聖物（頁籤二）狀態加減修正
-            if (selectedTab2Val === '四葉草' || selectedTab2Val === '幸運草') {
+            if (relic === '四葉草' || relic === '幸運草') {
                 let cloverOffset = 0;
                 if (rarIdx === 4) cloverOffset = -8;      // 平凡
                 else if (rarIdx === 3) cloverOffset = 4.8;  // 少見
@@ -2990,7 +3003,7 @@
                 else if (rarIdx === 1) cloverOffset = 0.24; // 超稀有
                 else if (rarIdx === 0) cloverOffset = 0.08; // 史詩
                 offsetPercent += cloverOffset * relicMultiplier;
-            } else if (selectedTab2Val === '天界') {
+            } else if (relic === '天界') {
                 let celestialOffset = 0;
                 if (rarIdx === 4) celestialOffset = -18;
                 else if (rarIdx === 3) celestialOffset = 10.8;
@@ -2998,7 +3011,7 @@
                 else if (rarIdx === 1) celestialOffset = 0.54;
                 else if (rarIdx === 0) celestialOffset = 0.18;
                 offsetPercent += celestialOffset * relicMultiplier;
-            } else if (selectedTab2Val === '徽章') {
+            } else if (relic === '徽章') {
                 if (rarIdx === 4) offsetPercent += -4;
                 else if (rarIdx === 3) offsetPercent += 2.4;
                 else if (rarIdx === 2) offsetPercent += 1.44;
@@ -3007,7 +3020,7 @@
             }
 
             // 海洋的祝福（拉桿二）加減修正
-            const slider5Val = parseFloat(document.getElementById('slider5').value) || 0;
+            const slider5Val = blessing;
             let blessingOffset = 0;
             if (rarIdx === 4) blessingOffset = -2 * slider5Val;
             else if (rarIdx === 3) blessingOffset = 1.2 * slider5Val;
@@ -3636,16 +3649,53 @@
             const options=document.getElementById('options-panel');
             const optionsHome=document.createComment('details options home');options.before(optionsHome);
             function restoreOptions(){options.inert=false;if(options.parentNode===optionsSlot)optionsHome.after(options);}
-            function countBingoLines(values, lit) {
+            function completedBingoLines(values, lit) {
                 const complete = index => values[index] === 'free' || (values[index] !== 'locked' && lit[index]);
-                let count = 0;
+                const lines=[];
                 for (let n = 0; n < 5; n++) {
-                    if (Array.from({length:5},(_,i)=>n*5+i).every(complete)) count++;
-                    if (Array.from({length:5},(_,i)=>i*5+n).every(complete)) count++;
+                    lines.push(Array.from({length:5},(_,i)=>n*5+i));
+                    lines.push(Array.from({length:5},(_,i)=>i*5+n));
                 }
-                if ([0,6,12,18,24].every(complete)) count++;
-                if ([4,8,12,16,20].every(complete)) count++;
-                return count;
+                lines.push([0,6,12,18,24],[4,8,12,16,20]);
+                return lines.filter(line=>line.every(complete));
+            }
+            function countBingoLines(values, lit) { return completedBingoLines(values,lit).length; }
+            function syncBingoHighlights(){
+                if(page.dataset.editing==='true')return;
+                const connected=new Set(completedBingoLines(values,lit).flat());
+                const candidates=[];
+                values.forEach((value,index)=>{
+                    if(lit[index])return;
+                    const fish=fishDatabase.find(f=>String(f.id)===value);if(!fish)return;
+                    const rarity=Number(fish.稀有度);
+                    let highest=0;
+                    // Each slider is monotonic for a fixed cell and equipment pair,
+                    // so its endpoints include the maximum over all levels.
+                    for(const relic of ['無','潮汐','四葉草','天界','徽章','閃耀'])for(const blessing of [0,5]){
+                        const bait=4; // Rank without bait, independently of the selected equipment.
+                        const rarityProbability=getAdjustedRarityProbability(rarity,bait,relic,blessing);
+                        if(rarityProbability<=0)continue;
+                        for(const level of [0,20]){
+                            const relief=level*.0075+Math.floor(level/10)*.05+(relic==='潮汐'?(bait===4?.5:.14):0);
+                            const penalty=1+Math.min(0,-.995+relief);
+                            rowNames.forEach((place,r)=>colMap.forEach(({time,weather},c)=>{
+                                const sums=preaggregated[r][c][rarity];
+                                const denominator=sums?sums.prefSum+sums.nonPrefSum*penalty:0;
+                                const preferred=fish[place]===1&&fish[time]===1&&fish[weather]===1;
+                                if(denominator>0)highest=Math.max(highest,fish.魚種加權*(preferred?1:penalty)/denominator*rarityProbability);
+                            }));
+                        }
+                    }
+                    candidates.push({index,highest});
+                });
+                const lowest=Math.min(...candidates.map(c=>c.highest));
+                const hardest=new Set(candidates.filter(c=>Math.abs(c.highest-lowest)<=Math.max(1e-14,Math.abs(lowest)*1e-9)).map(c=>c.index));
+                Array.from(grid.children).forEach((cell,index)=>{
+                    cell.dataset.connected=String(connected.has(index));
+                    cell.dataset.hardest=String(hardest.has(index));
+                });
+                const lightButton=info.querySelector('.bingo-light-button');
+                if(lightButton)lightButton.dataset.connected=String(connected.has(selected));
             }
             function summaryTable(){
                 const body=document.getElementById('bingo-stats-body');body.replaceChildren();
@@ -3691,6 +3741,7 @@
                 if(updatingBingoSelection){renderSelectedTable();return;}
                 const before=captureBingoNumbers();
                 renderSelectedTable();
+                syncBingoHighlights();
                 animateBingoNumbers(before);
             }
             function renderSelectedTable(){
@@ -3751,9 +3802,9 @@
                 }else title.textContent=value==='free'?'FREE':'未解鎖';info.append(title);
                 const lightButton=document.createElement('button');lightButton.type='button';lightButton.className='bingo-light-button';
                 const lightImage=document.createElement('img');lightImage.alt='';lightButton.append(lightImage);info.append(lightButton);
-                function syncLight(){const enabled=lit[selected];lightButton.setAttribute('aria-pressed',String(enabled));lightButton.setAttribute('aria-label',enabled?'已點亮':'未點亮');lightButton.title=enabled?'已點亮':'未點亮';lightImage.src=bingoLightIcons[enabled?'happy':'sad'];}
+                function syncLight(){lightButton.dataset.connected=String(completedBingoLines(values,lit).some(line=>line.includes(selected)));const enabled=lit[selected];lightButton.setAttribute('aria-pressed',String(enabled));lightButton.setAttribute('aria-label',enabled?'已點亮':'未點亮');lightButton.title=enabled?'已點亮':'未點亮';lightImage.src=bingoLightIcons[enabled?'happy':'sad'];}
                 syncLight();
-                lightButton.addEventListener('click',()=>{lit[selected]=!lit[selected];syncLight();grid.children[selected].dataset.lit=String(lit[selected]);saveBingo();});
+                lightButton.addEventListener('click',()=>{lit[selected]=!lit[selected];syncLight();grid.children[selected].dataset.lit=String(lit[selected]);syncBingoHighlights();saveBingo();});
                 if(fish){optionsSlot.append(options);syncSelectedTable();}
                 else {restoreOptions();summaryTable();for(const cell of document.querySelectorAll('#bingo-stats-body td:not(:first-child)'))cell.textContent='—';}
             }
@@ -3762,6 +3813,7 @@
             // Match the bait tags' 5-pixel corner and brightness steps: 239 → 207 → 127, shifted to white.
             const commonBingoTag='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">'+Array.from({length:5},(_,y)=>Array.from({length:5-y},(_,x)=>'<rect x="'+(11+y+x)+'" y="'+y+'" width="1" height="1" fill="'+(x===0?'#8f8f8f':x===1?'#dfdfdf':'#ffffff')+'"/>').join('')).join('')+'</svg>');
             function render(){
+                const connected=new Set(completedBingoLines(values,lit).flat());
                 grid.replaceChildren();
                 values.forEach((value,index)=>{
                     if(page.dataset.editing==='true'){
@@ -3774,15 +3826,15 @@
                         free.addEventListener('change',()=>{drafts[index].free=free.checked;number.disabled=free.checked;number.removeAttribute('aria-invalid');});
                         cell.append(numberField,label);grid.append(cell);return;
                     }
-                    const cell=document.createElement('button');cell.type='button';cell.className='bingo-cell';cell.dataset.lit=String(lit[index]);
+                    const cell=document.createElement('button');cell.type='button';cell.className='bingo-cell';cell.dataset.lit=String(lit[index]);cell.dataset.connected=String(connected.has(index));
                     const fish=fishDatabase.find(f=>String(f.id)===value);
                     const label=fish?fish.名字:value==='free'?'FREE':'未解鎖';
                     cell.setAttribute('aria-label',`第 ${Math.floor(index/5)+1} 列，第 ${index%5+1} 格：${label}`);cell.setAttribute('aria-pressed',String(index===selected));
-                    if(fish){const rarity=Number(fish.稀有度),baitIcon=document.querySelector(`.bait-tabs .tab1-btn[data-idx="${rarity}"] .option-icon`),tagSource=rarity===4?commonBingoTag:rarity<4&&baitIcon?(baitIcon.currentSrc||baitIcon.src):'';if(tagSource){const baitBackground=document.createElement('img');baitBackground.className='bingo-bait-background';baitBackground.src=tagSource;baitBackground.alt='';baitBackground.setAttribute('aria-hidden','true');const baitClip=document.createElement('span');baitClip.className='bingo-bait-clip';baitClip.setAttribute('aria-hidden','true');baitClip.append(baitBackground);cell.append(baitClip);}}
                     const image=document.createElement('img');image.className='bingo-fish-icon';image.src=fish?embeddedFishImages[value]:special[value]||special.locked;image.dataset.fishId=value;image.alt=label;cell.append(image);
                     if(!fish){cell.disabled=true;cell.setAttribute('aria-disabled','true');}else cell.addEventListener('click',()=>{selected=selected===index?-1:index;status.textContent='';render();saveBingo();});grid.append(cell);
                 });
                 refreshSelection();
+                syncBingoHighlights();
             }
             document.getElementById('search-new-page').addEventListener('click',()=>{location.hash='bingo';});
             document.getElementById('bingo-back').addEventListener('click',()=>{location.hash='search';syncFishPage();});
@@ -4071,6 +4123,10 @@
                             if(rect.width)result.push({char,left:rect.left-box.left,top:rect.top-box.top,width:rect.width,height:rect.height,font:style.font,color:style.color,delay:0});
                         }
                     }
+                    for(const img of parent.querySelectorAll('img')){
+                        const rect=img.getBoundingClientRect();
+                        if(rect.width)result.push({isImage:true,src:img.currentSrc||img.src,left:rect.left-box.left,top:rect.top-box.top,width:rect.width,height:rect.height,font:'',color:'',delay:0});
+                    }
                     const rows=[];
                     for(const glyph of result.slice(first)){
                         let row=rows.find(entry=>Math.abs(entry.top-glyph.top)<3);
@@ -4120,9 +4176,6 @@
             overlay.style.maskImage=`linear-gradient(to right,transparent,#000 ${edge}px,#000 calc(100% - ${rightFade}px),transparent)`;
             overlay.style.maskComposite='intersect';
             document.body.append(overlay);
-            const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-            svg.setAttribute('width','0');svg.setAttribute('height','0');svg.style.position='absolute';
-            const defs=document.createElementNS(svg.namespaceURI,'defs');svg.append(defs);overlay.append(svg);
             const duration=375;
             const lerp=(a,b,p)=>a+(b-a)*p;
             function layout(map){
@@ -4147,12 +4200,6 @@
                 const margin=Math.max(old.box.height,next.box.height)*2;
                 if(old.box.top>bounds.bottom+margin&&next.box.top>bounds.bottom+margin)continue;
                 const copies=[];
-                let blur=null,filter=null;
-                if(!lightMotion){
-                    filter=document.createElementNS(svg.namespaceURI,'filter');filter.id=`search-motion-blur-${index}`;
-                    filter.setAttribute('x','-50%');filter.setAttribute('width','200%');filter.setAttribute('y','-10%');filter.setAttribute('height','120%');
-                    blur=document.createElementNS(svg.namespaceURI,'feGaussianBlur');blur.setAttribute('stdDeviation','0 0');filter.append(blur);defs.append(filter);
-                }
                 const glyphs=sourceLetters?.get(item)||targetLetters?.get(item)||[];
                 for(let wrap=0;wrap<2;wrap++){
                     const group=document.createElement('div');group.className='search-morph-item';
@@ -4176,21 +4223,26 @@
                     const memeSource=item.querySelector('.diamond-reward-meme');
                     const meme=memeSource?part(memeSource):null;
                     const heart=part(item.querySelector('.fish-favorite img'),old.selected?'none':'grayscale(1)');
-                    if(filter)group.style.filter=`url(#${filter.id})`;
                     if(meme){group.style.overflow='hidden';group.style.borderRadius=old.radius;}
                     group.append(panel,image,...(meme?[meme]:[]),heart);
                     glyphs.forEach(glyph=>{
                         const slot=document.createElement('span');
                         slot.style.cssText=`position:absolute;left:${glyph.left}px;top:${glyph.top}px;width:${glyph.width}px;height:${glyph.height}px;overflow:hidden;`;
-                        const node=document.createElement('span');node.textContent=glyph.char;
-                        node.style.cssText=`position:absolute;left:0;top:0;font:${glyph.font};color:${glyph.color};line-height:${glyph.height}px;white-space:pre;`;
+                        let node;
+                        if(glyph.isImage){
+                            node=document.createElement('img');node.src=glyph.src;node.alt='';
+                            node.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
+                        }else{
+                            node=document.createElement('span');node.textContent=glyph.char;
+                            node.style.cssText=`position:absolute;left:0;top:0;font:${glyph.font};color:${glyph.color};line-height:${glyph.height}px;white-space:pre;`;
+                        }
                         node.style.animation=`${icons?'search-letter-roll-out':'search-letter-roll-in'} 160ms cubic-bezier(.22,1,.36,1) ${(icons?0:55)+glyph.delay}ms both`;
                         slot.append(node);group.append(slot);
                     });
                     fragment.append(group);
                     copies.push({group,panel,image,meme,heart});
                 }
-                tracks.push({index,old,next,copies,blur,glyphs,lastTravel:null});
+                tracks.push({index,old,next,copies,glyphs,lastTravel:null});
             }
             overlay.append(fragment);
             const previousVisibility=list.style.visibility,wasInert=list.inert;
@@ -4239,11 +4291,11 @@
                     const x=(travel-wrap)*span,row=oldRow+wrap;
                     const speed=track.lastTravel===null?0:Math.abs((travel-track.lastTravel)*span)/Math.max(1,delta);
                     track.lastTravel=travel;
-                    if(track.blur)track.blur.setAttribute('stdDeviation',`${p===0||p===1?0:Math.min(10,speed*.65)*.25} 0`);
+                    const raw=speed*.65;const stretch=p===0||p===1||lightMotion||raw<1.2?1:1+Math.min(.12,(raw-1.2)*.018);
                     const width=lerp(old.box.width,next.box.width,p),height=lerp(old.box.height,next.box.height,p);
                     for(let c=0;c<copies.length;c++){
                         const {group,panel,image,meme,heart}=copies[c];
-                        group.style.transform=`translate(${left+x-c*span}px,${top+(row+c)*pitch}px)`;
+                        group.style.transform=stretch===1?`translate(${left+x-c*span}px,${top+(row+c)*pitch}px)`:`translate(${left+x-c*span}px,${top+(row+c)*pitch}px) scaleX(${stretch})`;
                         group.style.width=`${width}px`;group.style.height=`${height}px`;
                         panel.style.width=`${width}px`;panel.style.height=`${height}px`;
                         for(const [node,key] of [[image,'image'],[meme,'meme'],[heart,'heart']]){
@@ -4269,7 +4321,22 @@
             frame=requestAnimationFrame(tick);
             timer=setTimeout(finish,duration+150);
         }
+        function initializeConcentricTabs(){
+            const tabs=Array.from(document.querySelectorAll('#options-panel .option-tabs'));
+            const sync=()=>tabs.forEach(tab=>{
+                if(!tab.getClientRects().length)return;
+                const style=getComputedStyle(tab);
+                const inset=parseFloat(style.paddingTop)+parseFloat(style.borderTopWidth);
+                const radius=Math.max(0,parseFloat(style.borderTopLeftRadius)-inset);
+                for(const button of tab.children)if(button.tagName==='BUTTON')button.style.setProperty('border-radius',radius+'px','important');
+            });
+            const observer=new ResizeObserver(sync);
+            tabs.forEach(tab=>observer.observe(tab));
+            window.addEventListener('resize',sync);
+            sync();
+        }
         function initializeFishPages() {
+            initializeConcentricTabs();
             initializeBingoPage();
             initializeTouchSearchScrollbar();
             initializeSearchImageLayer();
